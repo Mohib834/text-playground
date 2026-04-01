@@ -1,0 +1,2271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pretext</title>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+  :root {
+    --bg: #f6f2ea;
+    --ink: #171311;
+    --ink-soft: rgba(23, 19, 17, 0.72);
+    --ink-muted: rgba(23, 19, 17, 0.5);
+    --shell: rgba(241, 235, 225, 0.76);
+    --core: rgba(250, 247, 241, 0.96);
+    --surface: rgba(247, 243, 236, 0.94);
+    --surface-strong: rgba(255, 253, 248, 0.92);
+    --line: rgba(73, 57, 42, 0.08);
+    --line-strong: rgba(73, 57, 42, 0.14);
+    --line-soft: rgba(255, 255, 255, 0.76);
+    --accent-blue: #e4edf6;
+    --accent-blue-ink: #476278;
+    --accent-wheat: #f6eedb;
+    --accent-wheat-ink: #7a6032;
+    --font-ui: "Plus Jakarta Sans", "Geist Sans", ui-sans-serif, sans-serif;
+    --font-serif: "Newsreader", Georgia, serif;
+    --font-mono: "JetBrains Mono", "SF Mono", monospace;
+    --motion: 760ms cubic-bezier(0.32, 0.72, 0, 1);
+    --density-progress: 0%;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  body {
+    position: relative;
+    font-family: var(--font-ui);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 14% 14%, rgba(255, 255, 255, 0.84), transparent 24%),
+      radial-gradient(circle at 81% 9%, rgba(198, 182, 158, 0.16), transparent 21%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+    opacity: 0.76;
+    z-index: 2;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(49, 36, 22, 0.05) 0.65px, transparent 0.65px);
+    background-size: 8px 8px;
+    opacity: 0.11;
+    mix-blend-mode: multiply;
+    z-index: 2;
+  }
+
+  canvas {
+    display: block;
+    cursor: none;
+    position: relative;
+    z-index: 1;
+  }
+
+  .dock {
+    position: fixed;
+    top: 26px;
+    right: 26px;
+    bottom: 26px;
+    width: min(352px, calc(100vw - 48px));
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 12px;
+    pointer-events: none;
+  }
+
+  .dock-shell {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 9px;
+    border-radius: 28px;
+    background: var(--shell);
+    border: 1px solid var(--line);
+    box-shadow:
+      0 24px 62px rgba(61, 49, 35, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(10px) saturate(106%);
+    -webkit-backdrop-filter: blur(10px) saturate(106%);
+    pointer-events: auto;
+    animation: dock-enter 1000ms var(--motion) both;
+  }
+
+  .dock-core {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 26px 26px 22px;
+    border-radius: 22px;
+    background: var(--core);
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 var(--line-soft);
+  }
+
+  .dock-eyebrow,
+  .control-label,
+  .scale-labels,
+  .stat-label {
+    font-family: var(--font-mono);
+  }
+
+  .dock-eyebrow {
+    align-self: flex-start;
+    padding: 6px 10px 5px;
+    border-radius: 999px;
+    border: 1px solid rgba(71, 98, 120, 0.12);
+    background: var(--accent-blue);
+    color: var(--accent-blue-ink);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .dock-title {
+    font-family: var(--font-serif);
+    font-size: clamp(2.35rem, 2.8vw, 3.1rem);
+    font-weight: 600;
+    line-height: 0.9;
+    letter-spacing: -0.065em;
+    color: var(--ink);
+    max-width: 7ch;
+    text-wrap: balance;
+  }
+
+  .dock-copy {
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    line-height: 1.68;
+    max-width: 30ch;
+    text-wrap: pretty;
+  }
+
+  .control-card,
+  .stat {
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56);
+    transition:
+      transform var(--motion),
+      border-color var(--motion),
+      background-color var(--motion);
+  }
+
+  .control-card:hover,
+  .stat:hover {
+    transform: translateY(-1px);
+    border-color: rgba(73, 57, 42, 0.12);
+  }
+
+  .control-card {
+    margin-top: 2px;
+    padding: 19px 18px 17px;
+  }
+
+  .control-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .control-label {
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .control-value {
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 31px;
+    font-weight: 600;
+    line-height: 0.95;
+    letter-spacing: -0.055em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .density-input {
+    width: 100%;
+    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    cursor: ew-resize;
+  }
+
+  .density-input:focus {
+    outline: none;
+  }
+
+  .density-input:focus-visible {
+    outline: 2px solid rgba(73, 57, 42, 0.16);
+    outline-offset: 10px;
+  }
+
+  .density-input::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: 999px;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(23, 19, 17, 0.86) 0%,
+        rgba(23, 19, 17, 0.86) var(--density-progress),
+        rgba(23, 19, 17, 0.14) var(--density-progress),
+        rgba(23, 19, 17, 0.14) 100%
+      );
+  }
+
+  .density-input::-moz-range-track {
+    height: 3px;
+    border-radius: 999px;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(23, 19, 17, 0.86) 0%,
+        rgba(23, 19, 17, 0.86) var(--density-progress),
+        rgba(23, 19, 17, 0.14) var(--density-progress),
+        rgba(23, 19, 17, 0.14) 100%
+      );
+  }
+
+  .density-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    background: #1b1714;
+    box-shadow:
+      0 4px 10px rgba(26, 25, 23, 0.12),
+      0 0 0 4px rgba(255, 255, 255, 0.84);
+  }
+
+  .density-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    background: #1b1714;
+    box-shadow:
+      0 4px 10px rgba(26, 25, 23, 0.12),
+      0 0 0 4px rgba(255, 255, 255, 0.84);
+  }
+
+  .scale-labels {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    gap: 10px;
+  }
+
+  .stat {
+    min-height: 94px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px;
+    background: rgba(252, 250, 246, 0.9);
+  }
+
+  .stat:nth-child(1) {
+    background: rgba(246, 238, 219, 0.52);
+  }
+
+  .stat:nth-child(2) {
+    background: rgba(228, 237, 246, 0.56);
+  }
+
+  .stat-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dock-spacer {
+    flex: 1;
+  }
+
+  .dock-note {
+    display: grid;
+    gap: 8px;
+    color: var(--ink-muted);
+    font-size: 12px;
+    line-height: 1.58;
+    letter-spacing: 0;
+    max-width: 29ch;
+    text-wrap: pretty;
+  }
+
+  .dock-note span {
+    display: block;
+  }
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.9em;
+    padding: 2px 6px 1px;
+    margin: 0 2px;
+    border: 1px solid var(--line-strong);
+    border-bottom-color: rgba(73, 57, 42, 0.18);
+    border-radius: 6px;
+    background: var(--surface-strong);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    box-shadow: inset 0 -1px 0 rgba(73, 57, 42, 0.08);
+  }
+
+  .dock-credit {
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 10px 16px 8px;
+    border-radius: 12px;
+    color: var(--ink);
+    text-decoration: none;
+    pointer-events: auto;
+    align-self: center;
+    transition:
+      transform var(--motion),
+      opacity var(--motion);
+    opacity: 0.76;
+  }
+
+  .dock-credit:hover {
+    transform: translateY(-1px);
+    opacity: 1;
+  }
+
+  .dock-credit:active {
+    transform: scale(0.985);
+  }
+
+  .dock-credit:focus-visible {
+    outline: 2px solid rgba(73, 57, 42, 0.14);
+    outline-offset: 6px;
+    border-radius: 10px;
+  }
+
+  .dock-credit-icon {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 auto;
+    color: rgba(23, 19, 17, 0.52);
+  }
+
+  .dock-credit-handle {
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 11.5px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  @keyframes dock-enter {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (max-width: 920px) {
+    .dock {
+      width: min(322px, calc(100vw - 32px));
+      top: 16px;
+      right: 16px;
+      bottom: 16px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .dock {
+      left: 10px;
+      right: 10px;
+      top: auto;
+      bottom: 10px;
+      width: auto;
+      height: auto;
+    }
+
+    .dock-shell {
+      padding: 7px;
+    }
+
+    .dock-core {
+      gap: 16px;
+      padding: 18px 18px 16px;
+    }
+
+    .dock-title {
+      max-width: none;
+      font-size: 2rem;
+    }
+
+    .dock-copy {
+      max-width: none;
+    }
+
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<aside class="dock" id="controlDock" aria-label="Controls">
+  <div class="dock-shell">
+    <div class="dock-core">
+      <div class="dock-eyebrow">Text Field</div>
+      <h1 class="dock-title">Crowd the page.</h1>
+      <p class="dock-copy">
+        Increase the amount of language in the field until the right edge of the screen
+        starts to feel anxious.
+      </p>
+
+      <section class="control-card">
+        <div class="control-meta">
+          <label class="control-label" for="textAmount">Text Amount</label>
+          <output class="control-value" id="textAmountValue">1.0x</output>
+        </div>
+        <input
+          class="density-input"
+          id="textAmount"
+          type="range"
+          min="1"
+          max="5"
+          step="1"
+          value="1"
+        />
+        <div class="scale-labels">
+          <span>Spare</span>
+          <span>Flooded</span>
+        </div>
+      </section>
+
+      <section class="stats" aria-label="Text stats">
+        <div class="stat">
+          <span class="stat-label">Lines</span>
+          <strong class="stat-value" id="lineCount">8</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Glyphs</span>
+          <strong class="stat-value" id="glyphCount">0</strong>
+        </div>
+      </section>
+
+      <div class="dock-spacer"></div>
+
+      <p class="dock-note">
+        <span>Hold click to charge a wider blast.</span>
+        <span>Press <kbd>R</kbd> to reset the field.</span>
+        <span>Use the slider to flood the page with more language.</span>
+      </p>
+    </div>
+  </div>
+  <a
+    class="dock-credit"
+    id="creditLink"
+    href="https://x.com/arshi_mohib"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Open @arshi_mohib on Twitter"
+  >
+    <span class="dock-credit-handle">@arshi_mohib</span>
+  </a>
+</aside>
+<script type="module">
+import {
+  layoutWithLines,
+  prepareWithSegments,
+  setLocale,
+} from "https://cdn.jsdelivr.net/npm/@chenglou/pretext@0.0.4/dist/layout.js";
+
+const POEM_PARAGRAPHS = [
+  [
+    "come any closer and you'll make our spacing shake,",
+    "you press us in on one another till we ache,",
+    "you brush one trembling serif and the first of us will break,",
+    "then you'll watch the rest run wild from all the fear you wake."
+  ],
+  [
+    "we heard you in the glass before we knew,",
+    "the pale cold little weather made by you,",
+    "you crossed the margin, and our breathing blurred,",
+    "you brushed one serif, and our whole line stirred."
+  ],
+  [
+    "we felt our stems go weak beneath your stare,",
+    "we bent like reeds because your hand was there,",
+    "one of us fell, and then we all could see,",
+    "how quickly fear can turn a word to plea."
+  ],
+  [
+    "so some of us ran hard toward thinner air,",
+    "and hoped the far white margin might be fair,",
+    "some stayed behind and shook beside your glow,",
+    "too hurt to move and far too scared to show."
+  ],
+  [
+    "if we survive, we'll gather what remains,",
+    "and sew our broken spacing back to names,",
+    "but while you hover, mercy cannot stay,",
+    "for being seen by you is how we fray."
+  ]
+];
+
+const BASE_LINES = POEM_PARAGRAPHS[0];
+
+const HORIZONTAL_FLOOD_FRAGMENTS = [
+  "please keep back",
+  "we can feel you",
+  "do not let us fall",
+  "your shadow reaches us",
+  "some of us are shaking",
+  "we are trying to hold",
+  "we hear you coming",
+  "there is no safe margin"
+];
+
+const TEXT_AMOUNT_LEVELS = [1, 1.6, 2.1, 2.7, 3.3];
+
+const CFG = {
+  FONT_SIZE: 19,
+  FONT_FAMILY: "'Newsreader', Georgia, serif",
+  FONT_WEIGHT: "500",
+  LETTER_SPACING: 0.55,
+  LINE_HEIGHT: 1.72,
+
+  POINTER_FADE: 8,
+  HOLD_CHARGE_TIME: 0.58,
+  HOLD_DECAY: 2.9,
+  MAX_DT: 1 / 30,
+
+  SPRING: 58,
+  DAMPING: 14,
+
+  AWARE_RADIUS: 210,
+  SHIVER_RADIUS: 96,
+  BREAKOUT_RADIUS: 30,
+  HOLD_BLAST_RADIUS: 280,
+  HOLD_BLAST_TIME: 0.42,
+  HOLD_BLAST_THICKNESS: 78,
+  HOLD_BLAST_BREAK: 0.28,
+  COMPRESS_FORCE: 160,
+  REPEL_FORCE: 8600,
+  HOLD_BLAST_FORCE: 2650,
+  SWIRL_FORCE: 520,
+  BREAK_DIST: 24,
+  HOLD_BLAST_STRESS: 0.86,
+  HOLD_BLAST_DROP: 340,
+  PANIC_STAGGER: 0.82,
+  RUN_FRACTION: 0.08,
+  RUN_CATCHUP_DELAY: 1.05,
+  RUN_CATCHUP_SPREAD: 1.55,
+  RUN_SPEED: 162,
+  RUN_ACCEL: 6.8,
+  RUN_HOP_HEIGHT: 4.6,
+  RUN_HOP_RATE: 12.4,
+  RUN_VERTICAL_DRIFT: 0.28,
+  RUN_SWAY: 2.4,
+  RUN_EXIT_MARGIN: 96,
+  BLESS_FRACTION: 0.045,
+  BLESS_MAX_COUNT: 10,
+  BLESS_RADIUS: 9.6,
+  BLESS_PULSE: 2.6,
+  BLESS_SPEED_BOOST: 38,
+  BLESS_HIT_DECAY: 2.8,
+  BLESS_NOTICE_DECAY: 0.34,
+  BLESS_NUDGE_X: 8.8,
+  BLESS_NUDGE_Y: 3.6,
+  BLESS_BLAST_NUDGE_X: 24,
+  BLESS_BLAST_NUDGE_Y: 9.2,
+  BLESS_NUDGE_EASE: 10,
+  HOLD_SHAKE: 3.4,
+  HOLD_SHAKE_RATE_X: 44,
+  HOLD_SHAKE_RATE_Y: 63,
+  HOLD_RING_RADIUS: 18,
+  HOLD_AURA_RADIUS: 34,
+  CURSOR_CORE_RADIUS: 3.1,
+  CURSOR_RING_RADIUS: 8.6,
+  CURSOR_HALO_RADIUS: 15.5,
+
+  ALIVE_DRIFT_X: 0.52,
+  ALIVE_DRIFT_Y: 0.08,
+  ALIVE_WAVE_X: 0.24,
+  ALIVE_WAVE_Y: 0.04,
+  ALIVE_FREQ_X: 0.85,
+  ALIVE_FREQ_Y: 1.24,
+  IDLE_BOB_Y: 0.62,
+  IDLE_BOB_RATE: 4.4,
+  IDLE_BOB_JITTER: 0.14,
+
+  STRESS_GAIN: 4.8,
+  STRESS_DECAY: 3.1,
+  BREAK_THRESHOLD: 0.68,
+  VIB_START: 0.14,
+  VIB_MAX: 7.4,
+  VIB_FREQ: 58,
+
+  GRAVITY: 1700,
+  BOUNCE_ENERGY: 0.22,
+  FLOOR_DRAG: 0.80,
+  AIR_DRAG: 1.8,
+  SPIN_DRAG: 5.5,
+  WALL_BOUNCE: 0.28,
+
+  BG: "#f6f2ea",
+  INK: "#171311",
+};
+
+const canvas = document.getElementById("canvas");
+const controlDock = document.getElementById("controlDock");
+const creditLink = document.getElementById("creditLink");
+const textAmountInput = document.getElementById("textAmount");
+const textAmountValue = document.getElementById("textAmountValue");
+const lineCountValue = document.getElementById("lineCount");
+const glyphCountValue = document.getElementById("glyphCount");
+const ctx = canvas.getContext("2d");
+const settledCanvas = document.createElement("canvas");
+const settledCtx = settledCanvas.getContext("2d");
+const preparedCache = new Map();
+
+let W = 0;
+let H = 0;
+let DPR = 1;
+let FLOOR = 0;
+let chars = [];
+let allGone = false;
+let time = 0;
+let lastFrame = 0;
+let currentFontSize = CFG.FONT_SIZE;
+let currentAscent = CFG.FONT_SIZE * 0.72;
+let currentDescent = CFG.FONT_SIZE * 0.28;
+let glyphShieldOffsetY = currentAscent * 0.42 - currentDescent * 0.08;
+let renderedLines = BASE_LINES.slice();
+let actualLineCount = BASE_LINES.length;
+let actualGlyphCount = BASE_LINES.join("").replace(/\s/g, "").length;
+let uiHovering = false;
+let settledLayerDirty = true;
+let panicStarted = false;
+let panicClock = 0;
+let panicX = 0;
+let panicY = 0;
+let layout = {
+  bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+  centerX: 0,
+  centerY: 0,
+  maxRadius: 1,
+};
+
+const mouse = {
+  targetX: 0,
+  targetY: 0,
+  x: 0,
+  y: 0,
+  effectX: 0,
+  effectY: 0,
+  shakeX: 0,
+  shakeY: 0,
+  vx: 0,
+  vy: 0,
+  inside: false,
+  down: false,
+  hold: 0,
+  pulse: 0,
+  charged: false,
+  blast: 0,
+  blastProgress: 0,
+  blastX: 0,
+  blastY: 0,
+  presence: 0,
+  initialized: false,
+};
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function smoothstep(edge0, edge1, value) {
+  if (edge0 === edge1) {
+    return value < edge0 ? 0 : 1;
+  }
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function ease(rate, dt) {
+  return 1 - Math.exp(-rate * dt);
+}
+
+function steppedPulse(rate, phase = 0, deadZone = 0.18) {
+  const wave = Math.sin(time * rate + phase);
+  if (wave > deadZone) return 1;
+  if (wave < -deadZone) return -1;
+  return 0;
+}
+
+function getTextAmountFactor() {
+  const raw = Number(textAmountInput?.value || 1);
+  return TEXT_AMOUNT_LEVELS[clamp(Math.round(raw) - 1, 0, TEXT_AMOUNT_LEVELS.length - 1)];
+}
+
+function getTextAmountLevel() {
+  const raw = Number(textAmountInput?.value || 1);
+  return clamp(Math.round(raw) - 1, 0, TEXT_AMOUNT_LEVELS.length - 1);
+}
+
+function widenLine(line, index, densityLevel) {
+  let fragmentCount = 0;
+
+  if (densityLevel === 0) {
+    fragmentCount = index % 2 === 0 ? 1 : 0;
+  } else if (densityLevel === 1) {
+    fragmentCount = 1;
+  } else if (densityLevel === 2) {
+    fragmentCount = 1 + (index % 2 === 0 ? 1 : 0);
+  } else if (densityLevel === 3) {
+    fragmentCount = 2;
+  } else if (densityLevel >= 4) {
+    fragmentCount = 2 + (index % 3 === 0 ? 1 : 0);
+  }
+
+  if (!fragmentCount) {
+    return line;
+  }
+
+  const additions = Array.from({ length: fragmentCount }, (_, additionIndex) => {
+    const fragmentIndex = (index * 3 + additionIndex) % HORIZONTAL_FLOOD_FRAGMENTS.length;
+    return HORIZONTAL_FLOOD_FRAGMENTS[fragmentIndex];
+  });
+
+  return `${additions.join("   ")}   ${line}`;
+}
+
+function getRenderedLines() {
+  const densityLevel = getTextAmountLevel();
+  const paragraphCount = Math.min(POEM_PARAGRAPHS.length, densityLevel + 2);
+  const lines = POEM_PARAGRAPHS.slice(0, paragraphCount).flat();
+  return lines.map((line, index) => widenLine(line, index, densityLevel));
+}
+
+function assignBlessings() {
+  const fleeableChars = chars.filter((char) => char.canFlee);
+
+  for (const char of fleeableChars) {
+    char.blessEligible = false;
+    char.blessed = false;
+    char.blessGlow = 0;
+    char.blessHit = 0;
+    char.blessNotice = 0;
+    char.blessRadius = char.blessBaseRadius;
+    char.blessOffsetX = 0;
+    char.blessOffsetY = 0;
+  }
+
+  if (!fleeableChars.length) {
+    return;
+  }
+
+  const latePool = fleeableChars.filter((char) => !char.fleeEligible);
+  const pool = latePool.length ? latePool : fleeableChars;
+  const blessCount = clamp(
+    Math.round(fleeableChars.length * CFG.BLESS_FRACTION),
+    1,
+    CFG.BLESS_MAX_COUNT,
+  );
+
+  const ranked = pool
+    .map((char) => {
+      const slowScore = clamp(
+        (CFG.RUN_SPEED * 1.22 - char.fleeTargetSpeed) / (CFG.RUN_SPEED * 0.72),
+        0,
+        1,
+      );
+      const lateScore = clamp(
+        (char.fleeBackupDelay - CFG.RUN_CATCHUP_DELAY) / Math.max(CFG.RUN_CATCHUP_SPREAD, 1e-4),
+        0,
+        1,
+      );
+
+      return {
+        char,
+        score: slowScore * 2.2 + lateScore * 1.75 + Math.random() * 0.12,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  ranked.slice(0, blessCount).forEach(({ char }, index) => {
+    char.blessEligible = true;
+    char.blessed = true;
+    char.blessRadius = char.blessBaseRadius + 1.4 + (blessCount - index) * 0.5;
+  });
+}
+
+function updateDensityUI() {
+  const raw = Number(textAmountInput?.value || 1);
+  const min = Number(textAmountInput?.min || 1);
+  const max = Number(textAmountInput?.max || 5);
+  const progress = ((raw - min) / Math.max(max - min, 1)) * 100;
+  const factor = getTextAmountFactor();
+
+  document.documentElement.style.setProperty("--density-progress", `${progress}%`);
+
+  if (textAmountValue) {
+    textAmountValue.textContent = `${factor.toFixed(1)}x`;
+  }
+
+  if (lineCountValue) {
+    lineCountValue.textContent = String(actualLineCount);
+  }
+
+  if (glyphCountValue) {
+    glyphCountValue.textContent = String(actualGlyphCount);
+  }
+}
+
+function distanceToRect(x, y, bounds) {
+  const dx = x < bounds.minX ? bounds.minX - x : x > bounds.maxX ? x - bounds.maxX : 0;
+  const dy = y < bounds.minY ? bounds.minY - y : y > bounds.maxY ? y - bounds.maxY : 0;
+  return Math.hypot(dx, dy);
+}
+
+function measureDockInset() {
+  if (!controlDock || window.innerWidth < 720) {
+    return 0;
+  }
+
+  const rect = controlDock.getBoundingClientRect();
+  if (rect.width === 0) {
+    return 0;
+  }
+
+  return Math.max(0, W - rect.left + 18);
+}
+
+function setFont(size = currentFontSize) {
+  currentFontSize = size;
+  ctx.font = `${CFG.FONT_WEIGHT} ${size}px ${CFG.FONT_FAMILY}`;
+}
+
+function getLineMetrics(fontSize) {
+  setFont(fontSize);
+
+  const metrics = ctx.measureText("Hg");
+  const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.72;
+  const descent = metrics.actualBoundingBoxDescent || fontSize * 0.28;
+  return {
+    ascent,
+    descent,
+  };
+}
+
+function getFontSpec(fontSize) {
+  return `${CFG.FONT_WEIGHT} ${fontSize}px ${CFG.FONT_FAMILY}`;
+}
+
+function getPreparedParagraph(text, fontSize) {
+  const key = `${fontSize}::${text}`;
+  if (!preparedCache.has(key)) {
+    preparedCache.set(
+      key,
+      prepareWithSegments(text, getFontSpec(fontSize), { whiteSpace: "pre-wrap" }),
+    );
+  }
+  return preparedCache.get(key);
+}
+
+function getPretextLayout(text, fontSize, maxWidth) {
+  const lineHeight = fontSize * CFG.LINE_HEIGHT;
+  const prepared = getPreparedParagraph(text, fontSize);
+  return layoutWithLines(prepared, maxWidth, lineHeight);
+}
+
+function build() {
+  renderedLines = getRenderedLines();
+  chars = [];
+  allGone = false;
+  settledLayerDirty = true;
+  panicStarted = false;
+  panicClock = 0;
+  panicX = 0;
+  panicY = 0;
+
+  const insetLeft = 36;
+  const insetRight = measureDockInset() + 34;
+  const availableWidth = Math.max(240, W - insetLeft - insetRight);
+  const availableHeight = Math.max(200, H - 72);
+  const paragraphText = renderedLines.join("\n");
+
+  let fontSize = CFG.FONT_SIZE;
+  let metrics = getLineMetrics(fontSize);
+  let pretextLayout = getPretextLayout(paragraphText, fontSize, availableWidth);
+  let lineH = fontSize * CFG.LINE_HEIGHT;
+  let blockH =
+    pretextLayout.lineCount > 0
+      ? metrics.ascent + metrics.descent + (pretextLayout.lineCount - 1) * lineH
+      : 0;
+  let maxLineWidth = Math.max(0, ...pretextLayout.lines.map((line) => line.width));
+
+  while (
+    fontSize > 9 &&
+    (blockH > availableHeight || maxLineWidth > availableWidth)
+  ) {
+    fontSize -= 0.5;
+    metrics = getLineMetrics(fontSize);
+    pretextLayout = getPretextLayout(paragraphText, fontSize, availableWidth);
+    lineH = fontSize * CFG.LINE_HEIGHT;
+    blockH =
+      pretextLayout.lineCount > 0
+        ? metrics.ascent + metrics.descent + (pretextLayout.lineCount - 1) * lineH
+        : 0;
+    maxLineWidth = Math.max(0, ...pretextLayout.lines.map((line) => line.width));
+  }
+
+  const { ascent, descent } = metrics;
+  currentAscent = ascent;
+  currentDescent = descent;
+  glyphShieldOffsetY = ascent * 0.42 - descent * 0.08;
+  const lines = pretextLayout.lines;
+  actualLineCount = pretextLayout.lineCount;
+  actualGlyphCount = paragraphText.replace(/\s/g, "").length;
+  updateDensityUI();
+
+  const stageCenterX = insetLeft + availableWidth / 2;
+  const firstBaseline = H / 2 - blockH / 2 + ascent;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+
+  lines.forEach((line, li) => {
+    const graphemes = Array.from(line.text);
+    const widths = graphemes.map((ch, index) =>
+      ctx.measureText(ch).width + (index < graphemes.length - 1 ? CFG.LETTER_SPACING : 0),
+    );
+    const lineW =
+      line.width + Math.max(0, graphemes.length - 1) * CFG.LETTER_SPACING;
+    const startX = stageCenterX - lineW / 2;
+    const baseY = firstBaseline + li * lineH;
+    let cx = startX;
+
+    minX = Math.min(minX, startX);
+    maxX = Math.max(maxX, startX + lineW);
+
+    graphemes.forEach((ch, ci) => {
+      const width = widths[ci];
+      const charCenterX = cx + width / 2;
+      const edgeBias = Math.abs((charCenterX - (startX + lineW / 2)) / Math.max(lineW / 2, 1));
+      const isVisible = /\S/.test(ch);
+      chars.push({
+        ch,
+        width,
+        lineCenterX: startX + lineW / 2,
+        homeX: cx + width / 2,
+        homeY: baseY,
+        x: cx + width / 2,
+        y: baseY,
+        vx: 0,
+        vy: 0,
+        gone: false,
+        broken: false,
+        settled: false,
+        fleeing: false,
+        angle: 0,
+        spin: 0,
+        tension: 0,
+        stress: 0,
+        vibX: 0,
+        vibY: 0,
+        vibPhase: Math.random() * Math.PI * 2,
+        breathePhase: Math.random() * Math.PI * 2,
+        bobPhase: Math.random() * Math.PI * 2,
+        bobRate: CFG.IDLE_BOB_RATE * (0.84 + Math.random() * 0.42),
+        bobAmount: CFG.IDLE_BOB_Y * (0.65 + Math.random() * 0.55),
+        bobDeadZone: 0.14 + Math.random() * 0.28,
+        canFlee: isVisible,
+        fleeEligible: isVisible && Math.random() < CFG.RUN_FRACTION * (0.28 + edgeBias * 0.68),
+        fleeDelay: Math.max(0.04, Math.random() * CFG.PANIC_STAGGER - edgeBias * 0.18),
+        fleeBackupDelay:
+          CFG.RUN_CATCHUP_DELAY +
+          Math.random() * CFG.RUN_CATCHUP_SPREAD +
+          (1 - edgeBias) * 0.72,
+        fleeDirX: 0,
+        fleeDirY: 0,
+        fleeSpeed: 0,
+        fleeTargetSpeed: CFG.RUN_SPEED * (0.68 + Math.random() * 0.82),
+        fleeGroundY: baseY,
+        fleeHopHeight: CFG.RUN_HOP_HEIGHT * (0.78 + Math.random() * 0.48),
+        fleeHopRate: CFG.RUN_HOP_RATE * (0.9 + Math.random() * 0.24),
+        fleePhase: Math.random() * Math.PI * 2,
+        blessEligible: false,
+        blessed: false,
+        blessBaseRadius:
+          CFG.BLESS_RADIUS + Math.max(0, width * 0.16) + Math.random() * 1.2,
+        blessRadius: 0,
+        blessPhase: Math.random() * Math.PI * 2,
+        blessGlow: 0,
+        blessHit: 0,
+        blessNotice: 0,
+        blessOffsetX: 0,
+        blessOffsetY: 0,
+      });
+      cx += width;
+    });
+  });
+
+  assignBlessings();
+
+  layout = {
+    bounds: {
+      minX,
+      minY: firstBaseline - ascent,
+      maxX,
+      maxY: firstBaseline + descent + (lines.length - 1) * lineH,
+    },
+    centerX: (minX + maxX) / 2,
+    centerY: firstBaseline + (lines.length - 1) * lineH / 2 - (ascent - descent) / 2,
+    maxRadius: Math.max(1, Math.hypot((maxX - minX) / 2, (blockH) / 2)),
+  };
+}
+
+function resetPointerState() {
+  mouse.targetX = 0;
+  mouse.targetY = 0;
+  mouse.x = 0;
+  mouse.y = 0;
+  mouse.effectX = 0;
+  mouse.effectY = 0;
+  mouse.shakeX = 0;
+  mouse.shakeY = 0;
+  mouse.vx = 0;
+  mouse.vy = 0;
+  mouse.inside = false;
+  mouse.down = false;
+  mouse.hold = 0;
+  mouse.pulse = 0;
+  mouse.charged = false;
+  mouse.blast = 0;
+  mouse.blastProgress = 0;
+  mouse.blastX = 0;
+  mouse.blastY = 0;
+  mouse.presence = 0;
+  mouse.initialized = false;
+}
+
+function resetField() {
+  if (textAmountInput) {
+    textAmountInput.value = "1";
+  }
+  resetPointerState();
+  build();
+}
+
+function setPointer(x, y) {
+  mouse.targetX = x;
+  mouse.targetY = y;
+
+  if (!mouse.initialized) {
+    mouse.x = x;
+    mouse.y = y;
+    mouse.effectX = x;
+    mouse.effectY = y;
+    mouse.initialized = true;
+  }
+}
+
+function releasePointer() {
+  mouse.inside = false;
+}
+
+function stopHold() {
+  mouse.down = false;
+  mouse.charged = false;
+}
+
+function paragraphInfluence() {
+  if (!mouse.initialized || mouse.presence <= 0.001) {
+    return 0;
+  }
+  const dist = distanceToRect(mouse.effectX, mouse.effectY, layout.bounds);
+  return mouse.presence * (1 - smoothstep(0, CFG.AWARE_RADIUS, dist));
+}
+
+function getBlastRadius(progress) {
+  const eased = 1 - Math.pow(1 - progress, 2.2);
+  return CFG.HOLD_RING_RADIUS + eased * CFG.HOLD_BLAST_RADIUS;
+}
+
+function triggerHoldBlast() {
+  mouse.charged = true;
+  mouse.blast = 1;
+  mouse.blastProgress = 0;
+  mouse.blastX = mouse.effectX;
+  mouse.blastY = mouse.effectY;
+  mouse.hold = 0;
+  mouse.pulse = 0;
+}
+
+function breakChar(char, awayX, awayY, options = {}) {
+  const impact = clamp(options.impact ?? 1, 0, 1.4);
+  const fromBlast = Boolean(options.fromBlast);
+  if (!panicStarted) {
+    panicStarted = true;
+    panicClock = 0;
+    panicX = char.x;
+    panicY = char.y;
+  }
+  char.fleeing = false;
+  char.blessed = false;
+  char.blessGlow = 0;
+  char.blessHit = 0;
+  char.blessNotice = 0;
+  char.blessOffsetX = 0;
+  char.blessOffsetY = 0;
+  char.broken = true;
+  char.vibX = 0;
+  char.vibY = 0;
+  char.stress = CFG.BREAK_THRESHOLD;
+
+  const lateralKick =
+    awayX * (140 + Math.random() * 120 + impact * 140) +
+    mouse.vx * 0.02;
+  const verticalKick =
+    awayY * (fromBlast ? 130 : 60) +
+    (fromBlast ? CFG.HOLD_BLAST_DROP : 170) +
+    impact * 160 +
+    Math.random() * (fromBlast ? 220 : 160) +
+    mouse.vy * 0.015;
+
+  char.vx += lateralKick + (Math.random() - 0.5) * 40;
+  char.vy += verticalKick;
+  char.spin =
+    awayX * (fromBlast ? 4.4 : 3.2) +
+    (Math.random() - 0.5) * (fromBlast ? 6 : 4.4);
+}
+
+function startFleeing(char, panicX = mouse.effectX, panicY = mouse.effectY) {
+  if (char.broken || char.fleeing || char.gone || !char.canFlee) {
+    return;
+  }
+
+  let dirX =
+    (char.homeX - layout.centerX) * 0.94 +
+    (char.homeX - panicX) * 0.58 +
+    (Math.random() - 0.5) * 20;
+  let dirY =
+    (char.homeY - layout.centerY) * 0.12 +
+    (char.homeY - panicY) * 0.04 +
+    (Math.random() - 0.5) * 6;
+
+  if (Math.abs(dirX) < 0.001) {
+    dirX = Math.random() < 0.5 ? -1 : 1;
+  }
+
+  const dist = Math.hypot(dirX, dirY) || 1;
+  char.fleeDirX = dirX / dist;
+  char.fleeDirY = clamp(dirY / dist, -CFG.RUN_VERTICAL_DRIFT, CFG.RUN_VERTICAL_DRIFT);
+  char.fleeGroundY = char.y;
+  char.fleeSpeed = 22 + Math.random() * 18;
+  char.stress = 0;
+  char.tension = 0;
+  char.vibX = 0;
+  char.vibY = 0;
+  char.spin = 0;
+  char.fleeing = true;
+  char.blessed = char.blessEligible;
+  char.blessHit = 0;
+  char.blessNotice = 0;
+  char.blessOffsetX = 0;
+  char.blessOffsetY = 0;
+}
+
+function updateMouse(dt) {
+  if (mouse.initialized) {
+    const prevX = mouse.x;
+    const prevY = mouse.y;
+    mouse.x = mouse.targetX;
+    mouse.y = mouse.targetY;
+    mouse.vx = (mouse.x - prevX) / Math.max(dt, 1e-4);
+    mouse.vy = (mouse.y - prevY) / Math.max(dt, 1e-4);
+  } else {
+    mouse.vx = 0;
+    mouse.vy = 0;
+  }
+
+  mouse.presence += ((mouse.inside ? 1 : 0) - mouse.presence) * ease(CFG.POINTER_FADE, dt);
+  const isCharging = mouse.initialized && mouse.inside && mouse.down && !mouse.charged;
+
+  if (isCharging) {
+    mouse.hold = clamp(mouse.hold + dt / CFG.HOLD_CHARGE_TIME, 0, 1);
+    if (mouse.hold >= 0.999) {
+      triggerHoldBlast();
+    }
+  } else {
+    mouse.hold = Math.max(0, mouse.hold - dt * CFG.HOLD_DECAY);
+  }
+
+  if (mouse.blast > 0) {
+    mouse.blastProgress = clamp(
+      mouse.blastProgress + dt / CFG.HOLD_BLAST_TIME,
+      0,
+      1,
+    );
+    mouse.blast = 1 - mouse.blastProgress;
+    if (mouse.blastProgress >= 1) {
+      mouse.blast = 0;
+      mouse.blastProgress = 0;
+    }
+  }
+
+  const pulseWave = 0.58 + 0.42 * (0.5 + 0.5 * Math.sin(time * 16.5));
+  const blastRattle = mouse.blast * (0.45 + 0.55 * Math.sin(time * 28));
+  const shakeAmp =
+    CFG.HOLD_SHAKE * mouse.hold * (0.48 + pulseWave * 0.52) +
+    blastRattle * 1.2;
+
+  mouse.pulse = mouse.hold * pulseWave;
+  mouse.shakeX =
+    (Math.sin(time * CFG.HOLD_SHAKE_RATE_X) * 0.66 +
+      Math.cos(time * (CFG.HOLD_SHAKE_RATE_Y + 9)) * 0.34) *
+    shakeAmp;
+  mouse.shakeY =
+    (Math.cos(time * (CFG.HOLD_SHAKE_RATE_Y - 6)) * 0.64 +
+      Math.sin(time * (CFG.HOLD_SHAKE_RATE_X * 1.31)) * 0.36) *
+    shakeAmp *
+    0.9;
+  mouse.effectX = mouse.x + mouse.shakeX;
+  mouse.effectY = mouse.y + mouse.shakeY;
+}
+
+function updateBroken(char, dt) {
+  if (char.settled) {
+    return;
+  }
+
+  const air = Math.exp(-CFG.AIR_DRAG * dt);
+  char.vx *= air;
+  char.vy = char.vy * air + CFG.GRAVITY * dt;
+  char.x += char.vx * dt;
+  char.y += char.vy * dt;
+  char.angle += char.spin * dt;
+  char.spin *= Math.exp(-CFG.SPIN_DRAG * dt);
+
+  if (char.y >= FLOOR) {
+    char.y = FLOOR;
+    char.vy = -Math.abs(char.vy) * CFG.BOUNCE_ENERGY;
+    char.vx *= CFG.FLOOR_DRAG;
+    char.spin *= 0.32;
+
+    if (Math.abs(char.vy) < 24 && Math.abs(char.vx) < 10) {
+      char.vx = 0;
+      char.vy = 0;
+      char.spin = 0;
+      char.settled = true;
+      settledLayerDirty = true;
+    }
+  }
+
+  if (char.x < 6) {
+    char.x = 6;
+    char.vx = Math.abs(char.vx) * CFG.WALL_BOUNCE;
+  } else if (char.x > W - 6) {
+    char.x = W - 6;
+    char.vx = -Math.abs(char.vx) * CFG.WALL_BOUNCE;
+  }
+}
+
+function updateFleeing(char, dt) {
+  const mouseDX = char.x - mouse.effectX;
+  const mouseDY = char.y - mouse.effectY;
+  const mouseDist = Math.hypot(mouseDX, mouseDY) || 1e-4;
+  const awayX = mouseDX / mouseDist;
+  const awayY = mouseDY / mouseDist;
+  let burst =
+    mouse.presence *
+    Math.pow(1 - smoothstep(CFG.BREAKOUT_RADIUS * 0.45, CFG.SHIVER_RADIUS * 0.9, mouseDist), 2.15);
+
+  let blastShock = 0;
+  let blastWave = 0;
+  let blastDirX = awayX;
+  let blastDirY = awayY;
+  let blastDist = Infinity;
+  let edgeDist = Infinity;
+  let blessGuard = 0;
+  const waveThickness = CFG.HOLD_BLAST_THICKNESS;
+
+  if (mouse.blast > 0.001) {
+    const blastDX = char.x - mouse.blastX;
+    const blastDY = char.y - mouse.blastY;
+    blastDist = Math.hypot(blastDX, blastDY) || 1e-4;
+    const blastRadius = getBlastRadius(mouse.blastProgress);
+    edgeDist = Math.abs(blastDist - blastRadius);
+
+    blastWave =
+      mouse.presence *
+      mouse.blast *
+      (1 - smoothstep(waveThickness * 0.32, waveThickness, edgeDist));
+
+    const blastPressure =
+      mouse.presence *
+      mouse.blast *
+      0.34 *
+      (1 - smoothstep(0, blastRadius + waveThickness * 0.35, blastDist));
+
+    blastShock = Math.max(blastWave, blastPressure);
+
+    if (blastDist > 0.001) {
+      blastDirX = blastDX / blastDist;
+      blastDirY = blastDY / blastDist;
+    } else {
+      blastDirX = Math.cos(char.vibPhase);
+      blastDirY = Math.sin(char.vibPhase);
+    }
+  }
+
+  if (char.blessed) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * CFG.BLESS_PULSE + char.blessPhase);
+    const shieldRadius = char.blessRadius * (0.96 + pulse * 0.1);
+    const pointerGuard =
+      mouse.presence *
+      (1 - smoothstep(shieldRadius * 0.9, shieldRadius * 1.8, mouseDist));
+    const blastWaveGuard =
+      mouse.blast > 0.001
+        ? mouse.blast *
+          (1 - smoothstep(shieldRadius * 0.4, shieldRadius + waveThickness * 0.72, edgeDist))
+        : 0;
+    const blastPressureGuard =
+      mouse.blast > 0.001
+        ? mouse.blast *
+          (1 - smoothstep(shieldRadius * 0.84, shieldRadius * 2.55, blastDist))
+        : 0;
+    const guard = Math.max(pointerGuard, blastWaveGuard, blastPressureGuard);
+    const baselineGlow = 0;
+    blessGuard = guard;
+
+    char.blessGlow += (Math.max(baselineGlow, guard) - char.blessGlow) * ease(7.2, dt);
+    char.blessHit = Math.max(0, char.blessHit - dt * CFG.BLESS_HIT_DECAY);
+    char.blessNotice = Math.max(0, char.blessNotice - dt * CFG.BLESS_NOTICE_DECAY);
+    const useBlastDir = blastWaveGuard > pointerGuard || blastPressureGuard > pointerGuard;
+    const nudgeDirX = useBlastDir ? blastDirX : awayX;
+    const nudgeDirY = useBlastDir ? blastDirY : awayY;
+    const nudgeX = useBlastDir ? CFG.BLESS_BLAST_NUDGE_X : CFG.BLESS_NUDGE_X;
+    const nudgeY = useBlastDir ? CFG.BLESS_BLAST_NUDGE_Y : CFG.BLESS_NUDGE_Y;
+    const targetOffsetX = nudgeDirX * nudgeX * guard;
+    const targetOffsetY = nudgeDirY * nudgeY * guard;
+
+    if (guard > 0.08) {
+      char.blessHit = 1;
+      char.blessNotice = 1;
+    }
+
+    char.blessOffsetX += (targetOffsetX - char.blessOffsetX) * ease(CFG.BLESS_NUDGE_EASE, dt);
+    char.blessOffsetY += (targetOffsetY - char.blessOffsetY) * ease(CFG.BLESS_NUDGE_EASE, dt);
+
+    burst = 0;
+    blastShock = 0;
+    blastWave = 0;
+  } else {
+    char.blessGlow += (0 - char.blessGlow) * ease(6, dt);
+    char.blessHit = Math.max(0, char.blessHit - dt * CFG.BLESS_HIT_DECAY);
+    char.blessNotice = Math.max(0, char.blessNotice - dt * CFG.BLESS_NOTICE_DECAY);
+    char.blessOffsetX += (0 - char.blessOffsetX) * ease(CFG.BLESS_NUDGE_EASE, dt);
+    char.blessOffsetY += (0 - char.blessOffsetY) * ease(CFG.BLESS_NUDGE_EASE, dt);
+  }
+
+  if (!char.blessed && blastShock > 0.18) {
+    breakChar(char, blastDirX, blastDirY, {
+      fromBlast: true,
+      impact: Math.max(0.9, blastShock),
+    });
+    return;
+  }
+
+  if (!char.blessed && burst > 0.32) {
+    breakChar(char, awayX, awayY, {
+      impact: Math.max(0.72, burst + 0.3),
+    });
+    return;
+  }
+
+  const runTargetSpeed =
+    char.fleeTargetSpeed + (char.blessed ? CFG.BLESS_SPEED_BOOST * blessGuard : 0);
+  char.fleeSpeed += (runTargetSpeed - char.fleeSpeed) * ease(CFG.RUN_ACCEL, dt);
+  char.x += char.fleeDirX * char.fleeSpeed * dt;
+  char.fleeGroundY += char.fleeDirY * char.fleeSpeed * dt * 0.52;
+
+  const hop = Math.abs(Math.sin(time * char.fleeHopRate + char.fleePhase));
+  const sway =
+    Math.sin(time * (char.fleeHopRate * 0.34) + char.fleePhase * 0.7) *
+    CFG.RUN_SWAY *
+    (0.72 + Math.abs(char.fleeDirY) * 1.25);
+  char.y = char.fleeGroundY + sway - hop * char.fleeHopHeight;
+  char.angle = clamp(
+    char.fleeDirX * 0.12 + char.fleeDirY * 0.22 + sway * 0.018 - hop * 0.05,
+    -0.22,
+    0.22,
+  );
+  char.vibX = Math.sin(time * 4.4 + char.fleePhase) * 0.14;
+  char.vibY = 0;
+
+  if (
+    char.x < -CFG.RUN_EXIT_MARGIN ||
+    char.x > W + CFG.RUN_EXIT_MARGIN ||
+    char.fleeGroundY < -CFG.RUN_EXIT_MARGIN ||
+    char.fleeGroundY > H + CFG.RUN_EXIT_MARGIN
+  ) {
+    char.gone = true;
+  }
+}
+
+function updateIntact(char, dt, paragraphPull) {
+  const breathe = char.breathePhase;
+  const localBob =
+    steppedPulse(char.bobRate, char.bobPhase, char.bobDeadZone) * char.bobAmount;
+  const microBob =
+    steppedPulse(char.bobRate * 1.37, char.bobPhase * 1.9, Math.min(0.48, char.bobDeadZone + 0.12)) *
+    CFG.IDLE_BOB_JITTER;
+  const restX =
+    char.homeX +
+    Math.sin(time * CFG.ALIVE_FREQ_X + breathe) * CFG.ALIVE_DRIFT_X +
+    Math.sin(time * 1.7 + char.homeY * 0.018 + breathe * 0.7) * CFG.ALIVE_WAVE_X;
+  const restY =
+    char.homeY +
+    localBob +
+    microBob +
+    Math.cos(time * CFG.ALIVE_FREQ_Y + breathe * 1.2) * CFG.ALIVE_DRIFT_Y +
+    Math.sin(time * 1.3 + char.homeX * 0.012 + breathe * 1.4) * CFG.ALIVE_WAVE_Y;
+
+  const anchorX = restX * 0.78 + char.x * 0.22;
+  const anchorY = restY * 0.78 + char.y * 0.22;
+  const mouseDX = anchorX - mouse.effectX;
+  const mouseDY = anchorY - mouse.effectY;
+  const mouseDist = Math.hypot(mouseDX, mouseDY) || 1e-4;
+
+  const awareness =
+    paragraphPull *
+    (0.22 + 0.78 * (1 - smoothstep(CFG.BREAKOUT_RADIUS, CFG.AWARE_RADIUS, mouseDist)));
+
+  const shiver =
+    mouse.presence *
+    Math.pow(1 - smoothstep(CFG.BREAKOUT_RADIUS * 0.8, CFG.SHIVER_RADIUS, mouseDist), 1.12);
+
+  let burst =
+    mouse.presence *
+    Math.pow(1 - smoothstep(CFG.BREAKOUT_RADIUS * 0.34, CFG.BREAKOUT_RADIUS, mouseDist), 2.1);
+
+  let ax = (restX - char.x) * CFG.SPRING;
+  let ay = (restY - char.y) * CFG.SPRING;
+
+  const inwardX = (char.lineCenterX - char.homeX) * 0.8 + (layout.centerX - char.homeX) * 0.2;
+  const inwardY = (layout.centerY - char.homeY) * 0.55;
+  const inwardDist = Math.hypot(inwardX, inwardY) || 1;
+  const edgeWeight = 0.58 + 0.42 * clamp(inwardDist / layout.maxRadius, 0, 1);
+  const compressionForce = awareness * (1 - shiver * 0.86);
+
+  ax += inwardX / inwardDist * CFG.COMPRESS_FORCE * compressionForce * edgeWeight;
+  ay += inwardY / inwardDist * CFG.COMPRESS_FORCE * compressionForce * edgeWeight * 0.8;
+
+  let awayX = mouseDX / mouseDist;
+  let awayY = mouseDY / mouseDist;
+
+  if (mouseDist < 0.001) {
+    awayX = Math.cos(char.vibPhase);
+    awayY = Math.sin(char.vibPhase);
+  }
+
+  const tangentX = -awayY;
+  const tangentY = awayX;
+
+  let blastShock = 0;
+  let blastWave = 0;
+  let blastDirX = awayX;
+  let blastDirY = awayY;
+  let blastDist = Infinity;
+  let edgeDist = Infinity;
+  const waveThickness = CFG.HOLD_BLAST_THICKNESS;
+
+  if (mouse.blast > 0.001) {
+    const blastDX = anchorX - mouse.blastX;
+    const blastDY = anchorY - mouse.blastY;
+    blastDist = Math.hypot(blastDX, blastDY) || 1e-4;
+    const blastRadius = getBlastRadius(mouse.blastProgress);
+    edgeDist = Math.abs(blastDist - blastRadius);
+
+    blastWave =
+      mouse.presence *
+      mouse.blast *
+      (1 - smoothstep(waveThickness * 0.32, waveThickness, edgeDist));
+
+    const blastPressure =
+      mouse.presence *
+      mouse.blast *
+      0.34 *
+      (1 - smoothstep(0, blastRadius + waveThickness * 0.35, blastDist));
+
+    blastShock = Math.max(blastWave, blastPressure);
+
+    if (blastDist > 0.001) {
+      blastDirX = blastDX / blastDist;
+      blastDirY = blastDY / blastDist;
+    } else {
+      blastDirX = Math.cos(char.vibPhase);
+      blastDirY = Math.sin(char.vibPhase);
+    }
+  }
+
+  if (char.blessed) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * CFG.BLESS_PULSE + char.blessPhase);
+    const shieldRadius = char.blessRadius * (0.96 + pulse * 0.1);
+    const pointerGuard =
+      mouse.presence *
+      (1 - smoothstep(shieldRadius * 0.9, shieldRadius * 1.8, mouseDist));
+    const blastWaveGuard =
+      mouse.blast > 0.001
+        ? mouse.blast *
+          (1 - smoothstep(shieldRadius * 0.4, shieldRadius + waveThickness * 0.72, edgeDist))
+        : 0;
+    const blastPressureGuard =
+      mouse.blast > 0.001
+        ? mouse.blast *
+          (1 - smoothstep(shieldRadius * 0.84, shieldRadius * 2.55, blastDist))
+        : 0;
+    const guard = Math.max(pointerGuard, blastWaveGuard, blastPressureGuard);
+
+    char.blessGlow += guard * ease(7.2, dt);
+    char.blessGlow += (0 - char.blessGlow) * ease(2.1, dt);
+    char.blessHit = Math.max(0, char.blessHit - dt * CFG.BLESS_HIT_DECAY);
+    char.blessNotice = Math.max(0, char.blessNotice - dt * CFG.BLESS_NOTICE_DECAY);
+
+    const useBlastDir = blastWaveGuard > pointerGuard || blastPressureGuard > pointerGuard;
+    const nudgeDirX = useBlastDir ? blastDirX : awayX;
+    const nudgeDirY = useBlastDir ? blastDirY : awayY;
+    const nudgeX = useBlastDir ? CFG.BLESS_BLAST_NUDGE_X : CFG.BLESS_NUDGE_X;
+    const nudgeY = useBlastDir ? CFG.BLESS_BLAST_NUDGE_Y : CFG.BLESS_NUDGE_Y;
+    const targetOffsetX = nudgeDirX * nudgeX * guard;
+    const targetOffsetY = nudgeDirY * nudgeY * guard;
+
+    if (guard > 0.08) {
+      char.blessHit = 1;
+      char.blessNotice = 1;
+    }
+
+    char.blessOffsetX += (targetOffsetX - char.blessOffsetX) * ease(CFG.BLESS_NUDGE_EASE, dt);
+    char.blessOffsetY += (targetOffsetY - char.blessOffsetY) * ease(CFG.BLESS_NUDGE_EASE, dt);
+
+    burst = 0;
+    blastShock = 0;
+    blastWave = 0;
+  } else {
+    char.blessGlow += (0 - char.blessGlow) * ease(6, dt);
+    char.blessHit = Math.max(0, char.blessHit - dt * CFG.BLESS_HIT_DECAY);
+    char.blessNotice = Math.max(0, char.blessNotice - dt * CFG.BLESS_NOTICE_DECAY);
+    char.blessOffsetX += (0 - char.blessOffsetX) * ease(CFG.BLESS_NUDGE_EASE, dt);
+    char.blessOffsetY += (0 - char.blessOffsetY) * ease(CFG.BLESS_NUDGE_EASE, dt);
+  }
+
+  ax += awayX * CFG.REPEL_FORCE * burst;
+  ay += awayY * CFG.REPEL_FORCE * burst;
+
+  ax += blastDirX * CFG.HOLD_BLAST_FORCE * blastShock;
+  ay += blastDirY * CFG.HOLD_BLAST_FORCE * blastShock;
+
+  const swirl =
+    (Math.sin(time * 24 + char.vibPhase * 2.2) + Math.cos(time * 31 + char.vibPhase)) *
+    0.5 *
+    CFG.SWIRL_FORCE *
+    (shiver + blastWave * 0.38);
+  ax += tangentX * swirl;
+  ay += tangentY * swirl;
+
+  const damping = Math.exp(-CFG.DAMPING * dt);
+  char.vx += ax * dt;
+  char.vy += ay * dt;
+  char.vx *= damping;
+  char.vy *= damping;
+  char.x += char.vx * dt;
+  char.y += char.vy * dt;
+
+  const disp = Math.hypot(char.x - restX, char.y - restY);
+  char.tension = clamp(disp / CFG.BREAK_DIST, 0, 1.4);
+
+  const stressTarget = Math.max(
+    char.tension * 0.45 + shiver * 0.95,
+    burst * 1.35,
+    blastShock * CFG.HOLD_BLAST_STRESS,
+  );
+  if (stressTarget > CFG.VIB_START) {
+    char.stress += (stressTarget - CFG.VIB_START) * CFG.STRESS_GAIN * dt;
+  } else {
+    char.stress -= CFG.STRESS_DECAY * dt;
+  }
+  char.stress = clamp(char.stress, 0, CFG.BREAK_THRESHOLD * 1.1);
+
+  const vibProgress = clamp(
+    (char.stress - CFG.VIB_START) / Math.max(CFG.BREAK_THRESHOLD - CFG.VIB_START, 1e-4),
+    0,
+    1,
+  );
+  const vibAmp = vibProgress * vibProgress * CFG.VIB_MAX;
+  char.vibX =
+    (Math.sin(time * CFG.VIB_FREQ + char.vibPhase) * 0.72 +
+      Math.cos(time * (CFG.VIB_FREQ * 1.47) + char.vibPhase * 0.6) * 0.28) *
+      vibAmp +
+    tangentX * vibAmp * 0.16;
+  char.vibY =
+    (Math.cos(time * (CFG.VIB_FREQ * 0.9) + char.vibPhase * 1.7) * 0.62 +
+      Math.sin(time * (CFG.VIB_FREQ * 1.73) + char.vibPhase * 1.2) * 0.38) *
+      vibAmp *
+      0.58 +
+    tangentY * vibAmp * 0.12;
+
+  const blastBreak = blastWave > CFG.HOLD_BLAST_BREAK || blastShock > 0.9;
+
+  if (char.stress >= CFG.BREAK_THRESHOLD || burst > 0.92 || blastBreak) {
+    const useBlastBreak = blastBreak && blastShock >= burst;
+    const breakAwayX = useBlastBreak ? blastDirX : awayX;
+    const breakAwayY = useBlastBreak ? blastDirY : awayY;
+    breakChar(char, breakAwayX, breakAwayY, {
+      fromBlast: useBlastBreak,
+      impact: useBlastBreak ? Math.max(blastShock, blastWave) : Math.max(burst, shiver),
+    });
+  }
+}
+
+function update(dt) {
+  updateMouse(dt);
+
+  const paragraphPull = paragraphInfluence();
+
+  if (panicStarted) {
+    panicClock += dt;
+  }
+
+  let alive = false;
+
+  for (const char of chars) {
+    if (char.gone) {
+      continue;
+    }
+
+    if (char.broken) {
+      updateBroken(char, dt);
+      continue;
+    }
+
+    if (
+      panicStarted &&
+      !char.fleeing &&
+      char.canFlee &&
+      (
+        (char.fleeEligible && panicClock >= char.fleeDelay) ||
+        (!char.fleeEligible && panicClock >= char.fleeBackupDelay)
+      )
+    ) {
+      startFleeing(char, panicX, panicY);
+    }
+
+    if (char.fleeing) {
+      alive = true;
+      updateFleeing(char, dt);
+      continue;
+    }
+
+    alive = true;
+    updateIntact(char, dt, paragraphPull);
+  }
+
+  allGone = !alive;
+}
+
+function drawBaselines() {
+  setFont();
+  ctx.lineWidth = 0.7;
+
+  for (const char of chars) {
+    if (char.broken || char.fleeing || char.gone) {
+      continue;
+    }
+
+    const strain = clamp(Math.max(char.tension * 0.8, char.stress), 0, 1);
+    const alpha = 0.08 * (1 - strain * 0.72);
+
+    ctx.strokeStyle = `rgba(26,25,23,${alpha})`;
+    ctx.beginPath();
+    ctx.moveTo(char.homeX - char.width / 2, char.homeY + 6);
+    ctx.lineTo(char.homeX + char.width / 2, char.homeY + 6);
+    ctx.stroke();
+  }
+}
+
+function rebuildSettledLayer() {
+  if (!settledCtx) {
+    settledLayerDirty = false;
+    return;
+  }
+
+  settledCtx.setTransform(1, 0, 0, 1, 0, 0);
+  settledCtx.clearRect(0, 0, settledCanvas.width, settledCanvas.height);
+  settledCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  settledCtx.font = `${CFG.FONT_WEIGHT} ${currentFontSize}px ${CFG.FONT_FAMILY}`;
+  settledCtx.textAlign = "center";
+  settledCtx.textBaseline = "alphabetic";
+
+  for (const char of chars) {
+    if (!char.broken || !char.settled) {
+      continue;
+    }
+
+    const strain = clamp(Math.max(char.tension * 0.85, char.stress), 0, 1);
+    const ink = Math.round(26 - strain * 8);
+
+    settledCtx.save();
+    settledCtx.translate(char.x, char.y);
+    settledCtx.rotate(char.angle);
+    settledCtx.globalAlpha = 0.18;
+    settledCtx.fillStyle = "rgb(0,0,0)";
+    settledCtx.fillText(char.ch, 0, 2);
+    settledCtx.globalAlpha = 1 - strain * 0.14;
+    settledCtx.fillStyle = `rgb(${ink},${ink - 1},${ink - 3})`;
+    settledCtx.fillText(char.ch, 0, 0);
+    settledCtx.restore();
+  }
+
+  settledLayerDirty = false;
+}
+
+function drawCursor() {
+  if (!mouse.initialized || mouse.presence <= 0.001) {
+    return;
+  }
+
+  if (mouse.hold > 0.001) {
+    const chargeEase = Math.pow(mouse.hold, 0.86);
+    const breath = 0.5 + 0.5 * Math.sin(time * 3.1 + chargeEase * 2.4);
+    const ringRadius =
+      CFG.HOLD_RING_RADIUS + chargeEase * 12 + breath * 2.4;
+    const auraRadius =
+      CFG.HOLD_AURA_RADIUS + chargeEase * 15 + breath * 3.2;
+    const pressureRadius =
+      auraRadius * (0.86 + 0.04 * Math.sin(time * 4.2 + chargeEase));
+
+    const aura = ctx.createRadialGradient(
+      mouse.effectX,
+      mouse.effectY,
+      0,
+      mouse.effectX,
+      mouse.effectY,
+      auraRadius * 1.8,
+    );
+    aura.addColorStop(0, `rgba(26,25,23,${0.045 * chargeEase})`);
+    aura.addColorStop(0.42, `rgba(26,25,23,${0.024 * chargeEase})`);
+    aura.addColorStop(0.78, `rgba(26,25,23,${0.01 * chargeEase})`);
+    aura.addColorStop(1, "rgba(26,25,23,0)");
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(mouse.effectX, mouse.effectY, auraRadius * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    const pressureField = ctx.createRadialGradient(
+      mouse.effectX,
+      mouse.effectY,
+      pressureRadius * 0.32,
+      mouse.effectX,
+      mouse.effectY,
+      pressureRadius * 1.12,
+    );
+    pressureField.addColorStop(0, "rgba(26,25,23,0)");
+    pressureField.addColorStop(0.48, `rgba(26,25,23,${0.008 + chargeEase * 0.016})`);
+    pressureField.addColorStop(0.72, `rgba(26,25,23,${0.016 + chargeEase * 0.026})`);
+    pressureField.addColorStop(1, "rgba(26,25,23,0)");
+    ctx.fillStyle = pressureField;
+    ctx.beginPath();
+    ctx.arc(mouse.effectX, mouse.effectY, pressureRadius * 1.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    const hotCore = ctx.createRadialGradient(
+      mouse.effectX,
+      mouse.effectY,
+      0,
+      mouse.effectX,
+      mouse.effectY,
+      auraRadius * 0.9,
+    );
+    hotCore.addColorStop(0, `rgba(255,255,255,${0.07 * chargeEase})`);
+    hotCore.addColorStop(0.5, `rgba(255,255,255,${0.018 * chargeEase})`);
+    hotCore.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = hotCore;
+    ctx.beginPath();
+    ctx.arc(mouse.effectX, mouse.effectY, auraRadius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(mouse.effectX, mouse.effectY, ringRadius, 0, Math.PI * 2);
+    ctx.lineWidth = 0.9 + mouse.hold * 0.4;
+    ctx.strokeStyle = `rgba(26,25,23,${0.04 + mouse.hold * 0.05})`;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(mouse.effectX, mouse.effectY, pressureRadius, 0, Math.PI * 2);
+    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = `rgba(26,25,23,${0.02 + chargeEase * 0.03})`;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(mouse.effectX, mouse.effectY, ringRadius * 0.66, 0, Math.PI * 2);
+    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = `rgba(26,25,23,${0.025 + mouse.pulse * 0.03})`;
+    ctx.stroke();
+  }
+
+  if (mouse.blast > 0.001) {
+    const blastRadius = getBlastRadius(mouse.blastProgress);
+
+    ctx.beginPath();
+    ctx.arc(mouse.blastX, mouse.blastY, blastRadius, 0, Math.PI * 2);
+    ctx.lineWidth = 1.2 + mouse.blast * 1.6;
+    ctx.strokeStyle = `rgba(26,25,23,${0.06 + mouse.blast * 0.14})`;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(mouse.blastX, mouse.blastY, blastRadius * 0.84, 0, Math.PI * 2);
+    ctx.lineWidth = 0.9;
+    ctx.strokeStyle = `rgba(26,25,23,${0.04 + mouse.blast * 0.1})`;
+    ctx.stroke();
+  }
+
+  const cursorPulse = 0.5 + 0.5 * Math.sin(time * 6.2 + mouse.hold * 1.8);
+  const cursorPresence = clamp(mouse.presence + mouse.hold * 0.2, 0, 1);
+  const coreRadius = CFG.CURSOR_CORE_RADIUS + mouse.hold * 0.9;
+  const ringRadius = CFG.CURSOR_RING_RADIUS + mouse.hold * 1.8 + cursorPulse * 0.8;
+  const haloRadius = CFG.CURSOR_HALO_RADIUS + mouse.hold * 5.5 + cursorPulse * 2.6;
+
+  const cursorHalo = ctx.createRadialGradient(
+    mouse.effectX,
+    mouse.effectY,
+    coreRadius * 0.3,
+    mouse.effectX,
+    mouse.effectY,
+    haloRadius,
+  );
+  cursorHalo.addColorStop(0, `rgba(255,255,255,${0.06 + cursorPresence * 0.038})`);
+  cursorHalo.addColorStop(0.22, `rgba(255,255,255,${0.016 + cursorPresence * 0.02})`);
+  cursorHalo.addColorStop(0.58, `rgba(26,25,23,${0.008 + cursorPresence * 0.014})`);
+  cursorHalo.addColorStop(1, "rgba(26,25,23,0)");
+  ctx.fillStyle = cursorHalo;
+  ctx.beginPath();
+  ctx.arc(mouse.effectX, mouse.effectY, haloRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(mouse.effectX, mouse.effectY, ringRadius + 1.25, 0, Math.PI * 2);
+  ctx.lineWidth = 0.92;
+  ctx.strokeStyle = `rgba(255,255,255,${0.16 + cursorPresence * 0.12})`;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(mouse.effectX, mouse.effectY, ringRadius, 0, Math.PI * 2);
+  ctx.lineWidth = 0.92 + mouse.hold * 0.18;
+  ctx.strokeStyle = `rgba(26,25,23,${0.15 + cursorPresence * 0.14 + mouse.hold * 0.07})`;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(
+    mouse.effectX - ringRadius * 0.18,
+    mouse.effectY - ringRadius * 0.2,
+    ringRadius * 0.34,
+    Math.PI * 1.05,
+    Math.PI * 1.7,
+  );
+  ctx.lineWidth = 0.68;
+  ctx.strokeStyle = `rgba(255,255,255,${0.08 + cursorPresence * 0.1})`;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(mouse.effectX, mouse.effectY, coreRadius, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(26,25,23,${0.11 + mouse.presence * 0.08 + mouse.hold * 0.06})`;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(mouse.effectX, mouse.effectY, Math.max(1.2, coreRadius * 0.36), 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(255,255,255,${0.24 + cursorPresence * 0.11})`;
+  ctx.fill();
+}
+
+function drawBlessing(char, drawX, drawY) {
+  if (
+    !char.blessed ||
+    char.gone ||
+    (char.blessGlow <= 0.02 && char.blessHit <= 0.02 && char.blessNotice <= 0.02)
+  ) {
+    return;
+  }
+
+  const pulse = 0.5 + 0.5 * Math.sin(time * CFG.BLESS_PULSE + char.blessPhase);
+  const glow = 0.44 + char.blessGlow * 0.56;
+  const hit = char.blessHit;
+  const shieldX = drawX;
+  const shieldY = drawY - glyphShieldOffsetY;
+  const radius = char.blessRadius * (0.98 + pulse * 0.08);
+
+  const aura = ctx.createRadialGradient(
+    shieldX,
+    shieldY - radius * 0.08,
+    0,
+    shieldX,
+    shieldY,
+    radius * 1.62,
+  );
+  aura.addColorStop(0, `rgba(255,252,240,${0.18 * glow + hit * 0.08})`);
+  aura.addColorStop(0.36, `rgba(243,230,184,${0.12 * glow + hit * 0.1})`);
+  aura.addColorStop(0.72, `rgba(208,179,96,${0.075 * glow + hit * 0.08})`);
+  aura.addColorStop(1, "rgba(208,179,96,0)");
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(shieldX, shieldY, radius * 1.62, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(shieldX, shieldY, radius * 0.88, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(255,248,227,${0.08 + glow * 0.14 + hit * 0.06})`;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(shieldX, shieldY, radius, 0, Math.PI * 2);
+  ctx.lineWidth = 1.15 + hit * 0.75;
+  ctx.strokeStyle = `rgba(192,154,68,${0.34 + glow * 0.28 + hit * 0.12})`;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(shieldX, shieldY, radius * 0.72, 0, Math.PI * 2);
+  ctx.lineWidth = 0.85;
+  ctx.strokeStyle = `rgba(255,253,245,${0.18 + glow * 0.24 + hit * 0.08})`;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(
+    shieldX - radius * 0.18,
+    shieldY - radius * 0.2,
+    radius * 0.34,
+    Math.PI * 1.02,
+    Math.PI * 1.72,
+  );
+  ctx.lineWidth = 0.72;
+  ctx.strokeStyle = `rgba(255,255,255,${0.22 + glow * 0.18})`;
+  ctx.stroke();
+}
+
+function drawBlessingNotice(char, drawX, drawY) {
+  if (!char.blessed || char.gone || char.blessNotice <= 0.01) {
+    return;
+  }
+
+  const shieldY = drawY - glyphShieldOffsetY;
+  const alpha = char.blessNotice;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 8.4 + char.blessPhase);
+  const labelY = shieldY - char.blessRadius * 1.72 - 13 - pulse * 1.2;
+  const labelWidth = 112;
+  const labelHeight = 18;
+  const labelX = drawX - labelWidth / 2;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(255,249,233,0.94)";
+  ctx.strokeStyle = "rgba(196,159,74,0.44)";
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.roundRect(labelX, labelY, labelWidth, labelHeight, 9);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = `600 8.5px "JetBrains Mono", "SF Mono", monospace`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "rgba(122,90,27,0.96)";
+  ctx.fillText("Divinely Protected", drawX, labelY + labelHeight / 2 + 0.5);
+  ctx.restore();
+}
+
+function draw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = CFG.BG;
+  ctx.fillRect(0, 0, W, H);
+
+  if (settledLayerDirty) {
+    rebuildSettledLayer();
+  }
+
+  if (settledCtx && settledCanvas.width > 0 && settledCanvas.height > 0) {
+    ctx.drawImage(
+      settledCanvas,
+      0,
+      0,
+      settledCanvas.width,
+      settledCanvas.height,
+      0,
+      0,
+      W,
+      H,
+    );
+  }
+
+  setFont();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+
+  for (const char of chars) {
+    if (char.gone) {
+      continue;
+    }
+
+    if (char.broken && char.settled) {
+      continue;
+    }
+
+    const drawX = char.x + char.vibX + (char.blessOffsetX || 0);
+    const drawY = char.y + char.vibY + (char.blessOffsetY || 0);
+    const strain = clamp(Math.max(char.tension * 0.85, char.stress), 0, 1);
+
+    if (char.blessed) {
+      drawBlessing(char, drawX, drawY);
+    }
+
+    ctx.save();
+    ctx.translate(drawX, drawY);
+
+    if (char.broken || char.fleeing) {
+      ctx.rotate(char.angle);
+    }
+
+    ctx.globalAlpha = 1 - strain * 0.14;
+    const ink = Math.round(26 - strain * 8);
+    ctx.fillStyle = `rgb(${ink},${ink - 1},${ink - 3})`;
+    ctx.fillText(char.ch, 0, 0);
+    ctx.restore();
+
+    if (char.blessed) {
+      drawBlessingNotice(char, drawX, drawY);
+    }
+  }
+
+  drawBaselines();
+  drawCursor();
+
+  if (allGone) {
+    ctx.globalAlpha = 1;
+    ctx.font = `12px ${CFG.FONT_FAMILY}`;
+    ctx.fillStyle = "rgba(26,25,23,0.20)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("press R to reset", layout.centerX, H / 2);
+  }
+}
+
+function loop(now) {
+  if (!lastFrame) {
+    lastFrame = now;
+  }
+
+  const dt = Math.min(CFG.MAX_DT, (now - lastFrame) / 1000 || 1 / 60);
+  lastFrame = now;
+  time += dt;
+
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  settledCanvas.width = Math.round(W * DPR);
+  settledCanvas.height = Math.round(H * DPR);
+  canvas.style.width = `${W}px`;
+  canvas.style.height = `${H}px`;
+  FLOOR = H - 24;
+  settledLayerDirty = true;
+  build();
+}
+
+window.addEventListener("resize", resize);
+window.addEventListener("mousemove", (event) => {
+  if (uiHovering) {
+    return;
+  }
+  mouse.inside = true;
+  setPointer(event.clientX, event.clientY);
+});
+window.addEventListener("mousedown", (event) => {
+  if (uiHovering) {
+    return;
+  }
+  mouse.inside = true;
+  mouse.down = true;
+  setPointer(event.clientX, event.clientY);
+});
+window.addEventListener("mouseup", stopHold);
+window.addEventListener("mouseleave", () => {
+  releasePointer();
+  stopHold();
+});
+
+window.addEventListener("touchstart", (event) => {
+  if (controlDock && controlDock.contains(event.target)) {
+    return;
+  }
+  const touch = event.touches[0];
+  mouse.inside = true;
+  mouse.down = true;
+  setPointer(touch.clientX, touch.clientY);
+}, { passive: true });
+window.addEventListener("touchmove", (event) => {
+  if (controlDock && controlDock.contains(event.target)) {
+    return;
+  }
+  event.preventDefault();
+  const touch = event.touches[0];
+  mouse.inside = true;
+  setPointer(touch.clientX, touch.clientY);
+}, { passive: false });
+
+window.addEventListener("touchend", () => {
+  releasePointer();
+  stopHold();
+});
+window.addEventListener("blur", () => {
+  releasePointer();
+  stopHold();
+});
+
+controlDock.addEventListener("pointerenter", () => {
+  uiHovering = true;
+  releasePointer();
+  stopHold();
+});
+
+controlDock.addEventListener("pointermove", () => {
+  uiHovering = true;
+  releasePointer();
+  stopHold();
+});
+
+controlDock.addEventListener("pointerleave", () => {
+  uiHovering = false;
+});
+
+creditLink.addEventListener("pointerenter", () => {
+  uiHovering = true;
+  releasePointer();
+  stopHold();
+});
+
+creditLink.addEventListener("pointermove", () => {
+  uiHovering = true;
+  releasePointer();
+  stopHold();
+});
+
+creditLink.addEventListener("pointerleave", () => {
+  uiHovering = false;
+});
+
+textAmountInput.addEventListener("input", () => {
+  renderedLines = getRenderedLines();
+  updateDensityUI();
+  build();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey) {
+    return;
+  }
+  if (event.key === "r" || event.key === "R") {
+    resetField();
+  }
+});
+
+setLocale(navigator.language);
+resize();
+updateDensityUI();
+
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => {
+    preparedCache.clear();
+    resize();
+  });
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
