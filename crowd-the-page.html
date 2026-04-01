@@ -385,7 +385,7 @@
     justify-content: center;
     gap: 7px;
     min-height: 40px;
-    padding: 10px 16px 8px;
+    padding: 10px 11px 8px;
     border-radius: 12px;
     color: var(--ink);
     text-decoration: none;
@@ -395,6 +395,23 @@
       transform var(--motion),
       opacity var(--motion);
     opacity: 0.76;
+  }
+
+  .dock-credit-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    align-self: center;
+  }
+
+  .dock-credit-separator {
+    color: rgba(23, 19, 17, 0.34);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    line-height: 1;
+    user-select: none;
+    pointer-events: none;
   }
 
   .dock-credit:hover {
@@ -417,6 +434,13 @@
     height: 11px;
     flex: 0 0 auto;
     color: rgba(23, 19, 17, 0.52);
+  }
+
+  .dock-credit-external {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    color: rgba(23, 19, 17, 0.42);
   }
 
   .dock-credit-handle {
@@ -531,16 +555,28 @@
       </p>
     </div>
   </div>
-  <a
-    class="dock-credit"
-    id="creditLink"
-    href="https://x.com/arshi_mohib"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Open @arshi_mohib on Twitter"
-  >
-    <span class="dock-credit-handle">@arshi_mohib</span>
-  </a>
+  <div class="dock-credit-row" aria-label="External links">
+    <a
+      class="dock-credit"
+      id="creditLink"
+      href="https://x.com/arshi_mohib"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open @arshi_mohib on Twitter"
+    >
+      <span class="dock-credit-handle">@arshi_mohib</span>
+    </a>
+    <span class="dock-credit-separator" aria-hidden="true">|</span>
+    <a
+      class="dock-credit"
+      id="repoLink"
+      href="https://github.com/Mohib834/text-playground"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <span class="dock-credit-handle">Github Repo</span>
+    </a>
+  </div>
 </aside>
 <script type="module">
 import {
@@ -693,7 +729,7 @@ const CFG = {
 
 const canvas = document.getElementById("canvas");
 const controlDock = document.getElementById("controlDock");
-const creditLink = document.getElementById("creditLink");
+const creditLinks = document.querySelectorAll(".dock-credit");
 const textAmountInput = document.getElementById("textAmount");
 const textAmountValue = document.getElementById("textAmountValue");
 const lineCountValue = document.getElementById("lineCount");
@@ -2338,21 +2374,23 @@ controlDock.addEventListener("pointerleave", () => {
   uiHovering = false;
 });
 
-creditLink.addEventListener("pointerenter", () => {
-  uiHovering = true;
-  releasePointer();
-  stopHold();
-});
+for (const creditLink of creditLinks) {
+  creditLink.addEventListener("pointerenter", () => {
+    uiHovering = true;
+    releasePointer();
+    stopHold();
+  });
 
-creditLink.addEventListener("pointermove", () => {
-  uiHovering = true;
-  releasePointer();
-  stopHold();
-});
+  creditLink.addEventListener("pointermove", () => {
+    uiHovering = true;
+    releasePointer();
+    stopHold();
+  });
 
-creditLink.addEventListener("pointerleave", () => {
-  uiHovering = false;
-});
+  creditLink.addEventListener("pointerleave", () => {
+    uiHovering = false;
+  });
+}
 
 textAmountInput.addEventListener("input", () => {
   renderedLines = getRenderedLines();
